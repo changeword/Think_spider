@@ -6,9 +6,19 @@ from bs4 import BeautifulSoup
 
 #获取文档
 def get_content(url):
-    response = requests.get(url,timeout=5000)
-    soup=BeautifulSoup(response.content,"html.parser")
-    return soup
+    maxTryNum = 10
+    for tries in range(maxTryNum):
+        try:
+            response = requests.get(url,timeout=50000)
+            soup=BeautifulSoup(response.content,"html.parser")
+            return soup
+            break
+        except:
+            if tries < (maxTryNum-1):
+                continue
+            else:
+                print("连接出错",maxTryNum,url)
+                break
 
 def get_url(url):
     soup = get_content(url)
@@ -43,7 +53,7 @@ def get_url(url):
             sectences = text.find_all("p")
             article = ""
             for p in sectences:
-                article = article.strip()  + p.get_text().strip()
+                article = article  + p.get_text()
             if ("" != article):
                 sql = "SELECT * FROM article WHERE name = '%s'" % (b)
                 try:
@@ -62,6 +72,5 @@ def get_url(url):
     db.close()
                  #file = open("D:/example"+ b +".txt",'wb+')
                  #file.write(article.encode("GBK", 'ignore'))
-
 think_url = "http://www.aisixiang.com"
 get_url(think_url)
