@@ -20,7 +20,7 @@ def get_content(url):
                 break
 
 #递归查询下一页的文章
-def deal_sectences(text,url,article,flag):
+def deal_sectences(text,url,article,flag,b):
     sectences = text.find_all("p")
     ##查找是否包含下一页
     nextPages = text.find_all("a",string = re.compile("点击此处阅读下一页"))
@@ -40,18 +40,28 @@ def deal_sectences(text,url,article,flag):
         for nextPage in nextPages:
             nextPageUrl = nextPage.get("href")
             nextSoup = get_content(url+nextPageUrl)
-            print("有下一页",nextPage)
-            deal_sectences(nextSoup,url,article,flag)
-    print(article)
-    return article
+            deal_sectences(nextSoup,url,article,flag,b)
 
-
-def get_url(url):
-    soup = get_content(url)
     #连接MySQL数据库
     db = pymysql.connect("47.98.115.186","root","lp12580","mysql",charset='utf8')
     cursor = db.cursor()
+    if ("" != article):
+        sql = "SELECT * FROM article WHERE name = '%s'" % (b)
+        try:
+            cursor.execute(sql)
+            result = cursor.fetchall()
+            if (len(result) ==0 ):
+                sql = """INSERT INTO article (name,content) VALUES ('%s','%s')""" % (b,article)
+                try:
+                    cursor.execute(sql)
+                    db.commit()
+                except:
+                    print("insert wrong")
+        except:
+            print("select wrong")
 
+def get_url(url):
+    soup = get_content(url)
     list_new_url = []
     list_old_url = []
     #获取初始化URL
@@ -78,24 +88,8 @@ def get_url(url):
                     continue
             article = ""
             flag = 0
-            #sectences = text.find_all("p")
-            #for p in sectences:
-            #    article = article  + p.get_text()
-            article = deal_sectences(text,url,article,flag)
-            if ("" != article):
-                sql = "SELECT * FROM article WHERE name = '%s'" % (b)
-                try:
-                    cursor.execute(sql)
-                    result = cursor.fetchall()
-                    if (len(result) ==0 ):
-                        sql = """INSERT INTO article (name,content) VALUES ('%s','%s')""" % (b,article)
-                        try:
-                            cursor.execute(sql)
-                            db.commit()
-                        except:
-                            print("insert wrong")
-                except:
-                    print("select wrong")
+
+            article = deal_sectences(text,url,article,flag,b)
         print(str(len(list_old_url))+"---"+str(len(list_new_url)))
     db.close()
                  #file = open("D:/example"+ b +".txt",'wb+')
