@@ -20,7 +20,7 @@ def get_content(url):
                 break
 
 #递归查询下一页的文章
-def deal_sectences(text,url,article,flag,b):
+def deal_sectences(text,url,article,flag,b,db,cursor):
     sectences = text.find_all("p")
     ##查找是否包含下一页
     nextPages = text.find_all("a",string = re.compile("点击此处阅读下一页"))
@@ -40,11 +40,8 @@ def deal_sectences(text,url,article,flag,b):
         for nextPage in nextPages:
             nextPageUrl = nextPage.get("href")
             nextSoup = get_content(url+nextPageUrl)
-            deal_sectences(nextSoup,url,article,flag,b)
-
-    #连接MySQL数据库
-    db = pymysql.connect("47.98.115.186","root","lp12580","mysql",charset='utf8')
-    cursor = db.cursor()
+            deal_sectences(nextSoup,url,article,flag,b,db,cursor)
+    #将拼接好的数据插入到数据库
     if ("" != article):
         sql = "SELECT * FROM article WHERE name = '%s'" % (b)
         try:
@@ -64,6 +61,9 @@ def get_url(url):
     soup = get_content(url)
     list_new_url = []
     list_old_url = []
+    #连接MySQL数据库
+    db = pymysql.connect("47.98.115.186","root","lp12580","mysql",charset='utf8')
+    cursor = db.cursor()
     #获取初始化URL
     for a in soup.find_all("a",attrs={'target':'_blank'}):
         try:
@@ -89,7 +89,7 @@ def get_url(url):
             article = ""
             flag = 0
 
-            article = deal_sectences(text,url,article,flag,b)
+            article = deal_sectences(text,url,article,flag,b,db,cursor)
         print(str(len(list_old_url))+"---"+str(len(list_new_url)))
     db.close()
                  #file = open("D:/example"+ b +".txt",'wb+')
