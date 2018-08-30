@@ -6,19 +6,45 @@ from bs4 import BeautifulSoup
 
 #获取文档
 def get_content(url):
-    maxTryNum = 10
+    maxTryNum = 5
     for tries in range(maxTryNum):
         try:
-            response = requests.get(url,timeout=50000)
+            response = requests.get(url,timeout=500)
             soup=BeautifulSoup(response.content,"html.parser")
             return soup
-            break
         except:
             if tries < (maxTryNum-1):
                 continue
             else:
                 print("连接出错",maxTryNum,url)
                 break
+
+#递归查询下一页的文章
+def deal_sectences(text,url,article,flag):
+    sectences = text.find_all("p")
+    ##查找是否包含下一页
+    nextPages = text.find_all("a",string = re.compile("点击此处阅读下一页"))
+    for p in sectences:
+        if("进入专题" in p.get_text()):
+            flag = flag + 1
+        if("本文责编" in p.get_text() or "在方框中输入电子邮件地址" in p.get_text() or "的专栏" in p.get_text()):
+           a = 1
+        else:
+            ##进入专题只让出现一次
+            if("进入专题" in p.get_text()):
+                if(flag==1):
+                    article = article  + p.get_text()
+            else:
+                article = article  + p.get_text()
+    if(len(nextPages)>0):
+        for nextPage in nextPages:
+            nextPageUrl = nextPage.get("href")
+            nextSoup = get_content(url+nextPageUrl)
+            print("有下一页",nextPage)
+            deal_sectences(nextSoup,url,article,flag)
+    print(article)
+    return article
+
 
 def get_url(url):
     soup = get_content(url)
@@ -50,10 +76,12 @@ def get_url(url):
                     list_old_url = list(set(list_old_url))
                 except:
                     continue
-            sectences = text.find_all("p")
             article = ""
-            for p in sectences:
-                article = article  + p.get_text()
+            flag = 0
+            #sectences = text.find_all("p")
+            #for p in sectences:
+            #    article = article  + p.get_text()
+            article = deal_sectences(text,url,article,flag)
             if ("" != article):
                 sql = "SELECT * FROM article WHERE name = '%s'" % (b)
                 try:
