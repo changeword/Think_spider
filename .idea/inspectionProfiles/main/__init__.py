@@ -21,6 +21,12 @@ def get_content(url):
 
 #递归查询下一页的文章
 def deal_sectences(text,url,article,flag,b,db,cursor):
+    ##当点击下一页时，下一页的第一段会因为在div中无法抓取到，只能采用如下的方法，并去除掉【点击阅读下一页】
+    ##影响美观
+    content = text.find('div',id="content2")
+    if(flag>0 and content):
+        if content.get_text():
+            article = article.strip()  + content.get_text().strip()
     sectences = text.find_all("p")
     ##查找是否包含下一页
     nextPages = text.find_all("a",string = re.compile("点击此处阅读下一页"))
@@ -40,9 +46,11 @@ def deal_sectences(text,url,article,flag,b,db,cursor):
         for nextPage in nextPages:
             nextPageUrl = nextPage.get("href")
             nextSoup = get_content(url+nextPageUrl)
+            #递归运行
             deal_sectences(nextSoup,url,article,flag,b,db,cursor)
     #将拼接好的数据插入到数据库
     if ("" != article):
+        article = article.replace('(点击此处阅读下一页)','')
         sql = "SELECT * FROM article WHERE name = '%s'" % (b)
         try:
             cursor.execute(sql)
