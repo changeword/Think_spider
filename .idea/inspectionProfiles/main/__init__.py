@@ -20,7 +20,7 @@ def get_content(url):
                 break
 
 #递归查询下一页的文章
-def deal_sectences(text,url,article,flag,b,db,cursor):
+def deal_sectences(text,url,article,flag,b,db,cursor,title):
     ##当点击下一页时，下一页的第一段会因为在div中无法抓取到，只能采用如下的方法，并去除掉【点击阅读下一页】
     ##影响美观
     content = text.find('div',id="content2")
@@ -40,6 +40,8 @@ def deal_sectences(text,url,article,flag,b,db,cursor):
             if("进入专题" in p.get_text()):
                 if(flag==1):
                     article = article  + p.get_text()
+                    title = p.get_text().strip()
+                    title = title.replace("进入专题：",'')
             else:
                 article = article  + p.get_text()
     if(len(nextPages)>0):
@@ -47,16 +49,16 @@ def deal_sectences(text,url,article,flag,b,db,cursor):
             nextPageUrl = nextPage.get("href")
             nextSoup = get_content(url+nextPageUrl)
             #递归运行
-            deal_sectences(nextSoup,url,article,flag,b,db,cursor)
+            deal_sectences(nextSoup,url,article,flag,b,db,cursor,title)
     #将拼接好的数据插入到数据库
     if ("" != article):
         article = article.replace('(点击此处阅读下一页)','')
-        sql = "SELECT * FROM article WHERE name = '%s'" % (b)
+        sql = "SELECT * FROM article WHERE code = '%s'" % (b)
         try:
             cursor.execute(sql)
             result = cursor.fetchall()
             if (len(result) ==0 ):
-                sql = """INSERT INTO article (name,content) VALUES ('%s','%s')""" % (b,article)
+                sql = """INSERT INTO article (name,code,content) VALUES ('%s','%s','%s')""" % (title.strip(),b,article)
                 try:
                     cursor.execute(sql)
                     db.commit()
@@ -96,8 +98,9 @@ def get_url(url):
                     continue
             article = ""
             flag = 0
-
-            article = deal_sectences(text,url,article,flag,b,db,cursor)
+            ##文章标题
+            title = "暂无"
+            article = deal_sectences(text,url,article,flag,b,db,cursor,title)
         print(str(len(list_old_url))+"---"+str(len(list_new_url)))
     db.close()
                  #file = open("D:/example"+ b +".txt",'wb+')
